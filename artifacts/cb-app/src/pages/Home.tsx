@@ -3,6 +3,8 @@ import { Header } from "@/components/layout/Header";
 import { BlockMap } from "@/components/map/BlockMap";
 import { AddressSearch } from "@/components/map/AddressSearch";
 import { NarrativeViewer, type VisionState } from "@/components/narrative/NarrativeViewer";
+import { ComparisonTray, type ComparisonEntry } from "@/components/comparison/ComparisonTray";
+import { ComparisonModal } from "@/components/comparison/ComparisonModal";
 import { useNarrative, useDemoBlocks } from "@/hooks/use-narrative";
 import { MapPin } from "lucide-react";
 
@@ -10,10 +12,12 @@ export default function Home() {
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [addressLabel, setAddressLabel] = useState<string | null>(null);
 
-  // Vision state lives here so it can trigger narrative generation
   const [vision, setVision] = useState<VisionState | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [visionError, setVisionError] = useState<string | null>(null);
+
+  const [comparisonTray, setComparisonTray] = useState<ComparisonEntry[]>([]);
+  const [isComparisonOpen, setIsComparisonOpen] = useState(false);
 
   const { generateNarrative, isLoading, data: narrativeData } = useNarrative();
   const { blocks: demoBlocks, isLoading: blocksLoading } = useDemoBlocks();
@@ -38,7 +42,6 @@ export default function Home() {
     setIsAnalyzing(false);
     setVisionError(null);
 
-    // Auto-trigger narrative if a location is already selected
     if (selectedLocation) {
       try {
         await generateNarrative({ lat: selectedLocation.lat, lng: selectedLocation.lng });
@@ -47,6 +50,37 @@ export default function Home() {
       }
     }
   };
+
+  const handleAddToComparison = () => {
+    if (!narrativeData || comparisonTray.length >= 3) return;
+    const id = `${narrativeData.coordinates.lat}_${narrativeData.coordinates.lng}`;
+    if (comparisonTray.some((e) => e.id === id)) return;
+
+    const entry: ComparisonEntry = {
+      id,
+      address: addressLabel || narrativeData.address || "Unknown location",
+      yearBuilt: narrativeData.propertyData?.yearBuilt ?? null,
+      pppCoverageRate: narrativeData.pppData?.coverageRate ?? null,
+      mortgageDenialRate: narrativeData.mortgageData?.denialRate ?? null,
+      lat: narrativeData.coordinates.lat,
+      lng: narrativeData.coordinates.lng,
+    };
+
+    setComparisonTray((prev) => [...prev, entry]);
+  };
+
+  const handleRemoveFromComparison = (id: string) => {
+    setComparisonTray((prev) => prev.filter((e) => e.id !== id));
+    if (comparisonTray.length <= 1) setIsComparisonOpen(false);
+  };
+
+  const currentLocationId = narrativeData
+    ? `${narrativeData.coordinates.lat}_${narrativeData.coordinates.lng}`
+    : null;
+
+  const isInComparison = currentLocationId
+    ? comparisonTray.some((e) => e.id === currentLocationId)
+    : false;
 
   return (
     <div className="min-h-screen flex flex-col bg-background overflow-hidden selection:bg-primary/10">
@@ -120,11 +154,28 @@ export default function Home() {
               onVisionResult={handleVisionResult}
               onStartAnalysis={() => { setIsAnalyzing(true); setVisionError(null); }}
               onVisionError={(msg) => { setVisionError(msg); setIsAnalyzing(false); }}
+              onAddToComparison={narrativeData && !isLoading ? handleAddToComparison : undefined}
+              isInComparison={isInComparison}
+              comparisonFull={comparisonTray.length >= 3 && !isInComparison}
             />
           </div>
         </section>
 
       </main>
+
+      {/* Comparison Tray — fixed bottom bar */}
+      <ComparisonTray
+        entries={comparisonTray}
+        onRemove={handleRemoveFromComparison}
+        onCompare={() => setIsComparisonOpen(true)}
+      />
+
+      {/* Comparison Modal */}
+      <ComparisonModal
+        entries={comparisonTray}
+        open={isComparisonOpen}
+        onClose={() => setIsComparisonOpen(false)}
+      />
     </div>
   );
 }

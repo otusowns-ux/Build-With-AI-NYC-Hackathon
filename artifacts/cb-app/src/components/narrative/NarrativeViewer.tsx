@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Building2, Landmark, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { MapPin, Building2, Landmark, Clock, CheckCircle2, AlertCircle, Plus, Check } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { ImageUpload } from "./ImageUpload";
 import type { NarrativeResponse } from "@workspace/api-client-react/src/generated/api.schemas";
@@ -20,6 +20,9 @@ interface NarrativeViewerProps {
   onVisionResult: (description: string, imageDataUrl: string) => void;
   onStartAnalysis: () => void;
   onVisionError: (msg: string) => void;
+  onAddToComparison?: () => void;
+  isInComparison?: boolean;
+  comparisonFull?: boolean;
 }
 
 export function NarrativeViewer({
@@ -33,6 +36,9 @@ export function NarrativeViewer({
   onVisionResult,
   onStartAnalysis,
   onVisionError,
+  onAddToComparison,
+  isInComparison,
+  comparisonFull,
 }: NarrativeViewerProps) {
 
   const uploadBar = (
@@ -239,6 +245,36 @@ export function NarrativeViewer({
           <article className="min-w-0">
             <MarkdownRenderer data={data} />
           </article>
+
+          {/* Add to Comparison */}
+          {onAddToComparison && (
+            <div className="mt-10 pt-6 border-t border-border/50">
+              <button
+                onClick={onAddToComparison}
+                disabled={isInComparison || comparisonFull}
+                className={`
+                  inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200
+                  ${isInComparison
+                    ? "bg-primary/5 border-primary/20 text-primary cursor-default"
+                    : comparisonFull
+                      ? "bg-muted/30 border-border text-muted-foreground cursor-not-allowed opacity-50"
+                      : "bg-card border-border text-foreground hover:bg-muted/50 hover:border-foreground/30 shadow-sm"}
+                `}
+              >
+                {isInComparison ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Added to Comparison
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    {comparisonFull ? "Comparison Full (max 3)" : "+ Add to Comparison"}
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
     </div>
