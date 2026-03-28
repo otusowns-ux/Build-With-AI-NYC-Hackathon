@@ -102,6 +102,32 @@ export const GetDemoBlocksResponseItem = zod.object({
 export const GetDemoBlocksResponse = zod.array(GetDemoBlocksResponseItem);
 
 /**
+ * @summary Identify the NYC location visible in a photo using Gemini Vision
+ */
+export const LocateImageBody = zod.object({
+  imageBase64: zod.string().describe("Base64-encoded image data"),
+  mimeType: zod
+    .string()
+    .optional()
+    .describe("Image MIME type (e.g. image\/jpeg, image\/png)"),
+});
+
+export const LocateImageResponse = zod.object({
+  located: zod
+    .boolean()
+    .describe(
+      "Whether a specific NYC location was successfully identified and geocoded",
+    ),
+  lat: zod.number().nullish(),
+  lng: zod.number().nullish(),
+  address: zod.string().nullish(),
+  confidence: zod.enum(["high", "medium", "low", "none"]),
+  neighborhood: zod.string().nullish(),
+  borough: zod.string().nullish(),
+  visualDescription: zod.string(),
+});
+
+/**
  * @summary Analyze a building image with Gemini Vision
  */
 export const AnalyzeImageBody = zod.object({

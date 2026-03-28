@@ -168,3 +168,90 @@ Be concise and factual. 2–3 sentences maximum. Use plain language, not archite
 
   return response.text ?? "Unable to analyze the image.";
 }
+
+export interface ImageLocationResult {
+  address: string | null;
+  crossStreets: string[] | null;
+  neighborhood: string | null;
+  borough: string | null;
+  confidence: "high" | "medium" | "low" | "none";
+  visualDescription: string;
+  searchQuery: string | null;
+}
+
+export async function locateImageInNYC(
+  imageBase64: string,
+  mimeType: string,
+): Promise<ImageLocationResult> {
+  const ai = getGeminiClient();
+
+  const systemPrompt = `You are a precision location-identification system for New York City photographs.
+Your only job is to extract every piece of location-identifying evidence from the image and return a structured JSON object.
+You never guess — you only report what is directly visible or strongly implied by visual evidence in the photograph.`;
+
+  const userPrompt = `Look at this photograph and identify its location in New York City.
+
+Search the image for ALL of the following location evidence:
+- Street sign text (street name + cross street)
+- Address numbers on buildings, awnings, or mailboxes
+- Business names that are NYC-specific and searchable
+- Subway station entrances with line/station text visible
+- Neighborhood-specific landmarks (named bridges, parks, plazas)
+- Borough name indicators (water towers, billboards, transit maps)
+- Any text visible on storefronts, scaffolding, or signage
+
+Return a single JSON object with exactly these fields:
+{
+  "address": "full address if visible, e.g. '125 Lenox Ave'",
+  "crossStreets": ["Street A", "Street B"] or null if no cross streets visible,
+  "neighborhood": "neighborhood name if identifiable",
+  "borough": "Manhattan|Brooklyn|Queens|Bronx|Staten Island or null",
+  "confidence": "high if address/cross-streets are clearly readable, medium if neighborhood+borough are clear but no specific address, low if only vague visual cues, none if no location evidence at all",
+  "visualDescription": "2-3 sentence factual description of the building/block type, architectural era, and current condition",
+  "searchQuery": "the most specific geocodable query string for NYC, e.g. '125th St & Lenox Ave, Harlem, Manhattan, NYC' or null if confidence is none"
+}
+
+Do not invent information. If you cannot see clear location evidence, set confidence to "none" and searchQuery to null.`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { inlineData: { mimeType, data: imageBase64 } },
+          { text: userPrompt },
+        ],
+      },
+    ],
+    config: {
+      systemInstruction: systemPrompt,
+      responseMimeType: "application/json",
+      maxOutputTokens: 1024,
+    },
+  });
+
+  const raw = response.text ?? "{}";
+  try {
+    const parsed = JSON.parse(raw) as Partial<ImageLocationResult>;
+    return {
+      address: parsed.address ?? null,
+      crossStreets: parsed.crossStreets ?? null,
+      neighborhood: parsed.neighborhood ?? null,
+      borough: parsed.borough ?? null,
+      confidence: parsed.confidence ?? "none",
+      visualDescription: parsed.visualDescription ?? "Unable to analyze the image.",
+      searchQuery: parsed.searchQuery ?? null,
+    };
+  } catch {
+    return {
+      address: null,
+      crossStreets: null,
+      neighborhood: null,
+      borough: null,
+      confidence: "none",
+      visualDescription: "Unable to analyze the image.",
+      searchQuery: null,
+    };
+  }
+}

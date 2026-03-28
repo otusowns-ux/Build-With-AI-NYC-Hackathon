@@ -69,6 +69,36 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DemoBlock"
+  /narrative/locate:
+    post:
+      operationId: locateImage
+      tags: [narrative]
+      summary: Identify the NYC location visible in a photo using Gemini Vision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LocateRequest"
+      responses:
+        "200":
+          description: Location result with optional geocoded coordinates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocateResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /narrative/vision:
     post:
       operationId: analyzeImage
@@ -146,6 +176,47 @@ components:
         - narrative
         - address
         - coordinates
+    LocateRequest:
+      type: object
+      properties:
+        imageBase64:
+          type: string
+          description: Base64-encoded image data
+        mimeType:
+          type: string
+          description: Image MIME type (e.g. image/jpeg, image/png)
+      required:
+        - imageBase64
+    LocateResponse:
+      type: object
+      properties:
+        located:
+          type: boolean
+          description: Whether a specific NYC location was successfully identified and geocoded
+        lat:
+          type: number
+          nullable: true
+        lng:
+          type: number
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        confidence:
+          type: string
+          enum: [high, medium, low, none]
+        neighborhood:
+          type: string
+          nullable: true
+        borough:
+          type: string
+          nullable: true
+        visualDescription:
+          type: string
+      required:
+        - located
+        - confidence
+        - visualDescription
     VisionRequest:
       type: object
       properties:

@@ -20,6 +20,8 @@ import type {
   DemoBlock,
   ErrorResponse,
   HealthStatus,
+  LocateRequest,
+  LocateResponse,
   NarrativeRequest,
   NarrativeResponse,
   VisionRequest,
@@ -271,6 +273,92 @@ export function useGetDemoBlocks<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Identify the NYC location visible in a photo using Gemini Vision
+ */
+export const getLocateImageUrl = () => {
+  return `/api/narrative/locate`;
+};
+
+export const locateImage = async (
+  locateRequest: LocateRequest,
+  options?: RequestInit,
+): Promise<LocateResponse> => {
+  return customFetch<LocateResponse>(getLocateImageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(locateRequest),
+  });
+};
+
+export const getLocateImageMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof locateImage>>,
+    TError,
+    { data: BodyType<LocateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof locateImage>>,
+  TError,
+  { data: BodyType<LocateRequest> },
+  TContext
+> => {
+  const mutationKey = ["locateImage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof locateImage>>,
+    { data: BodyType<LocateRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return locateImage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LocateImageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof locateImage>>
+>;
+export type LocateImageMutationBody = BodyType<LocateRequest>;
+export type LocateImageMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Identify the NYC location visible in a photo using Gemini Vision
+ */
+export const useLocateImage = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof locateImage>>,
+    TError,
+    { data: BodyType<LocateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof locateImage>>,
+  TError,
+  { data: BodyType<LocateRequest> },
+  TContext
+> => {
+  return useMutation(getLocateImageMutationOptions(options));
+};
 
 /**
  * @summary Analyze a building image with Gemini Vision

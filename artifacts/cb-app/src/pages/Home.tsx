@@ -37,17 +37,25 @@ export default function Home() {
     await handleLocationSelect(lat, lng, label);
   };
 
-  const handleVisionResult = async (description: string, imageDataUrl: string) => {
+  const handleVisionResult = (description: string, imageDataUrl: string) => {
     setVision({ description, imageDataUrl });
     setIsAnalyzing(false);
     setVisionError(null);
+  };
 
-    if (selectedLocation) {
-      try {
-        await generateNarrative({ lat: selectedLocation.lat, lng: selectedLocation.lng });
-      } catch (error) {
-        console.error("Failed to regenerate narrative after vision:", error);
-      }
+  const handleImageLocationFound = async (
+    lat: number,
+    lng: number,
+    address: string,
+    _visualDescription: string,
+  ) => {
+    setSelectedLocation({ lat, lng });
+    setAddressLabel(address);
+    setIsAnalyzing(false);
+    try {
+      await generateNarrative({ lat, lng });
+    } catch (error) {
+      console.error("Failed to generate narrative from image locate:", error);
     }
   };
 
@@ -152,6 +160,7 @@ export default function Home() {
               visionError={visionError}
               selectedLocation={selectedLocation}
               onVisionResult={handleVisionResult}
+              onLocationFound={handleImageLocationFound}
               onStartAnalysis={() => { setIsAnalyzing(true); setVisionError(null); }}
               onVisionError={(msg) => { setVisionError(msg); setIsAnalyzing(false); }}
               onAddToComparison={narrativeData && !isLoading ? handleAddToComparison : undefined}

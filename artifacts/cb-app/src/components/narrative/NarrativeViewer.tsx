@@ -18,6 +18,7 @@ interface NarrativeViewerProps {
   visionError: string | null;
   selectedLocation?: { lat: number; lng: number } | null;
   onVisionResult: (description: string, imageDataUrl: string) => void;
+  onLocationFound: (lat: number, lng: number, address: string, visualDescription: string) => void;
   onStartAnalysis: () => void;
   onVisionError: (msg: string) => void;
   onAddToComparison?: () => void;
@@ -32,8 +33,9 @@ export function NarrativeViewer({
   vision,
   isAnalyzing,
   visionError,
-  selectedLocation,
+  selectedLocation: _selectedLocation,
   onVisionResult,
+  onLocationFound,
   onStartAnalysis,
   onVisionError,
   onAddToComparison,
@@ -44,11 +46,11 @@ export function NarrativeViewer({
   const uploadBar = (
     <div className="px-2 md:px-8 pt-5 pb-3 flex flex-col gap-2">
       <ImageUpload
+        onLocationFound={onLocationFound}
         onVisionResult={onVisionResult}
         isAnalyzing={isAnalyzing}
         onStartAnalysis={onStartAnalysis}
         onError={onVisionError}
-        selectedLocation={selectedLocation}
       />
       {visionError && (
         <div className="flex items-center gap-1.5 text-xs text-red-500/80 px-1">

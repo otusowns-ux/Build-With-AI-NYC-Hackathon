@@ -10,6 +10,7 @@ import {
 } from "./data";
 import { generateCivicNarrative } from "./gemini";
 import visionRouter from "./vision";
+import locateRouter from "./locate";
 
 const router: IRouter = Router();
 
@@ -56,6 +57,7 @@ router.get("/demo-blocks", (_req, res) => {
 });
 
 router.use("/vision", visionRouter);
+router.use("/locate", locateRouter);
 
 router.post("/", async (req, res) => {
   const parseResult = GenerateNarrativeBody.safeParse(req.body);

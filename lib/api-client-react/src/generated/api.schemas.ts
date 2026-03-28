@@ -79,6 +79,35 @@ export interface NarrativeResponse {
   coordinates: Coordinates;
 }
 
+export interface LocateRequest {
+  /** Base64-encoded image data */
+  imageBase64: string;
+  /** Image MIME type (e.g. image/jpeg, image/png) */
+  mimeType?: string;
+}
+
+export type LocateResponseConfidence =
+  (typeof LocateResponseConfidence)[keyof typeof LocateResponseConfidence];
+
+export const LocateResponseConfidence = {
+  high: "high",
+  medium: "medium",
+  low: "low",
+  none: "none",
+} as const;
+
+export interface LocateResponse {
+  /** Whether a specific NYC location was successfully identified and geocoded */
+  located: boolean;
+  lat?: number | null;
+  lng?: number | null;
+  address?: string | null;
+  confidence: LocateResponseConfidence;
+  neighborhood?: string | null;
+  borough?: string | null;
+  visualDescription: string;
+}
+
 export interface VisionRequest {
   /** Base64-encoded image data */
   imageBase64: string;
