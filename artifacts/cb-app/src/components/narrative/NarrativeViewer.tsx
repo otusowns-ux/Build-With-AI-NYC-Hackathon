@@ -204,6 +204,37 @@ export function NarrativeViewer({
             </div>
           </header>
 
+          {/* Archival Photo Strip — shows first 1-2 OldNYC photos above narrative */}
+          {data.photos && data.photos.length > 0 && (
+            <div className="mb-10 space-y-6">
+              {data.photos.slice(0, 2).map((photo, i) => (
+                <figure key={`${photo.url}-${i}`} className="group relative">
+                  <div className="relative overflow-hidden rounded-sm border border-border shadow-sm bg-muted/10">
+                    <img
+                      src={photo.url}
+                      alt={`Historical view from ${photo.year}`}
+                      className="w-full h-auto object-cover grayscale contrast-125 hover:grayscale-0 transition-all duration-700 ease-out"
+                      loading="lazy"
+                      onError={(e) => { (e.currentTarget.closest("figure") as HTMLElement | null)?.style.setProperty("display", "none"); }}
+                    />
+                    <div className="absolute inset-0 ring-1 ring-inset ring-black/10 pointer-events-none rounded-sm" />
+                  </div>
+                  <figcaption className="mt-3 border-l-2 border-primary/20 pl-4">
+                    {photo.description && (
+                      <p className="text-sm leading-relaxed text-foreground">
+                        <span className="font-bold font-serif mr-2">{photo.year}.</span>
+                        {photo.description}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-0.5 tracking-wide uppercase">
+                      Photo: {photo.source}
+                    </p>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          )}
+
           {/* Narrative Content */}
           <article className="min-w-0">
             <MarkdownRenderer data={data} />

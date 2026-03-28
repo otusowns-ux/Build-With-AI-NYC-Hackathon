@@ -286,32 +286,94 @@ export function getPPPData(zipCode: string): PPPData {
   };
 }
 
+let _oldNYCCoords: string[] | null = null;
+let _oldNYCCoordsPromise: Promise<string[]> | null = null;
+
+async function getOldNYCCoords(): Promise<string[]> {
+  if (_oldNYCCoords) return _oldNYCCoords;
+  if (_oldNYCCoordsPromise) return _oldNYCCoordsPromise;
+
+  _oldNYCCoordsPromise = (async () => {
+    try {
+      const resp = await fetch("https://www.oldnyc.org/static/lat-lon-counts.js", {
+        headers: { "User-Agent": "CB-CivicNarrative/1.0" },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!resp.ok) return [];
+      const text = await resp.text();
+      const coords: string[] = [];
+      const re = /"(-?\d+\.\d+,-?\d+\.\d+)":/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(text)) !== null) {
+        coords.push(m[1]);
+      }
+      _oldNYCCoords = coords;
+      logger.info({ count: coords.length }, "Loaded OldNYC coordinate index");
+      return coords;
+    } catch (err) {
+      logger.warn({ err }, "Failed to load OldNYC coordinate index");
+      _oldNYCCoordsPromise = null;
+      return [];
+    }
+  })();
+
+  return _oldNYCCoordsPromise;
+}
+
+function findNearestOldNYCCoord(lat: number, lng: number, coords: string[], maxKm = 0.5): string | null {
+  let best: string | null = null;
+  let bestDist = Infinity;
+  const cosLat = Math.cos((lat * Math.PI) / 180);
+  for (const key of coords) {
+    const comma = key.indexOf(",");
+    const clat = parseFloat(key.slice(0, comma));
+    const clng = parseFloat(key.slice(comma + 1));
+    const dlat = (clat - lat) * 111;
+    const dlng = (clng - lng) * 111 * cosLat;
+    const dist = Math.sqrt(dlat * dlat + dlng * dlng);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = key;
+    }
+  }
+  return bestDist <= maxKm ? best : null;
+}
+
 export async function fetchArchivalPhotos(lat: number, lng: number): Promise<ArchivalPhoto[]> {
   try {
-    const url = `https://www.oldnyc.org/api/by_location?lat=${lat}&lon=${lng}&r=0.2`;
+    const coords = await getOldNYCCoords();
+    if (coords.length === 0) return [];
+
+    const nearestKey = findNearestOldNYCCoord(lat, lng, coords);
+    if (!nearestKey) return [];
+
+    const fileKey = nearestKey.replace(",", "");
+    const url = `https://www.oldnyc.org/by-location/${fileKey}.json`;
+
     const resp = await fetch(url, {
       headers: { "User-Agent": "CB-CivicNarrative/1.0" },
       signal: AbortSignal.timeout(8000),
     });
     if (!resp.ok) return [];
-    const data = await resp.json() as any;
+
+    const photoList = await resp.json() as any[];
+    if (!Array.isArray(photoList)) return [];
+
     const photos: ArchivalPhoto[] = [];
-    if (data?.photos) {
-      for (const photo of data.photos.slice(0, 5)) {
-        const year = photo.date ? parseInt(photo.date.substring(0, 4)) : null;
-        if (!year) continue;
-        const photoId = photo.photo_id || photo.id || "";
-        const imageUrl = photoId
-          ? `https://www.oldnyc.org/static/images/orig/${photoId}.jpg`
-          : photo.url || "";
-        if (!imageUrl) continue;
-        photos.push({
-          url: imageUrl,
-          year,
-          description: photo.text || photo.title || null,
-          source: "NYPL Milstein Collection via OldNYC",
-        });
-      }
+    for (const photo of photoList.slice(0, 5)) {
+      const year = photo.date ? parseInt(String(photo.date).substring(0, 4)) : null;
+      if (!year || isNaN(year)) continue;
+      const imageUrl = photo.image_url || "";
+      if (!imageUrl) continue;
+      const title = photo.title || (photo.geocode?.location
+        ? [photo.geocode.location.str1, photo.geocode.location.str2].filter(Boolean).join(" & ")
+        : null);
+      photos.push({
+        url: imageUrl,
+        year,
+        description: title || null,
+        source: "NYPL Milstein Collection via OldNYC",
+      });
     }
     return photos.sort((a, b) => a.year - b.year);
   } catch (err) {
