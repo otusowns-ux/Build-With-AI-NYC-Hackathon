@@ -9,6 +9,7 @@ import {
   fetchArchivalPhotos,
 } from "./data";
 import { generateCivicNarrative } from "./gemini";
+import visionRouter from "./vision";
 
 const router: IRouter = Router();
 
@@ -53,6 +54,8 @@ const DEMO_BLOCKS = [
 router.get("/demo-blocks", (_req, res) => {
   res.json(DEMO_BLOCKS);
 });
+
+router.use("/vision", visionRouter);
 
 router.post("/", async (req, res) => {
   const parseResult = GenerateNarrativeBody.safeParse(req.body);

@@ -1,5 +1,21 @@
-import { ai } from "@workspace/integrations-gemini-ai";
+import { GoogleGenAI } from "@google/genai";
 import type { PropertyData, LandmarkData, MortgageData, PPPData, ArchivalPhoto } from "./data";
+
+function getGeminiClient(): GoogleGenAI {
+  if (process.env.GOOGLE_GEMINI_API_KEY) {
+    return new GoogleGenAI({ apiKey: process.env.GOOGLE_GEMINI_API_KEY });
+  }
+  if (process.env.AI_INTEGRATIONS_GEMINI_API_KEY && process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
+    return new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+      httpOptions: {
+        apiVersion: "",
+        baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+      },
+    });
+  }
+  throw new Error("No Gemini API key configured. Set GOOGLE_GEMINI_API_KEY.");
+}
 
 interface NarrativeInput {
   address: string;
@@ -88,6 +104,7 @@ ${photoList}
 
 Generate a chronological narrative anchored to this data. Move from the earliest dated reference to the present.`;
 
+  const ai = getGeminiClient();
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
     contents: [{ role: "user", parts: [{ text: userPrompt }] }],
@@ -98,4 +115,48 @@ Generate a chronological narrative anchored to this data. Move from the earliest
   });
 
   return response.text ?? "No narrative could be generated for this location.";
+}
+
+export async function analyzeImageWithVision(imageBase64: string, mimeType: string): Promise<string> {
+  const ai = getGeminiClient();
+
+  const systemPrompt = `You are CB — a civic narrative agent for New York City specializing in urban visual analysis.
+
+Analyze the provided photograph of a New York City building or streetscape with precision and journalistic restraint.
+Focus only on what is directly visible in the image. Do not speculate beyond what the photograph shows.`;
+
+  const userPrompt = `Analyze this photograph of a New York City building or block.
+
+Describe:
+1. Building type (residential, commercial, industrial, mixed-use, etc.)
+2. Estimated construction era based on architectural style and visible features (e.g., "pre-war, likely 1920s–1930s" or "post-war mid-century")
+3. Notable architectural features (materials, facade details, window styles, decorative elements)
+4. Any visible signage, business names, or street markings
+5. Apparent current condition and use
+
+Be concise and factual. 2–3 sentences maximum. Use plain language, not architectural jargon.`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: imageBase64,
+            },
+          },
+          { text: userPrompt },
+        ],
+      },
+    ],
+    config: {
+      systemInstruction: systemPrompt,
+      maxOutputTokens: 512,
+    },
+  });
+
+  return response.text ?? "Unable to analyze the image.";
 }

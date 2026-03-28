@@ -17,3 +17,5 @@ export * from "./narrativeRequest";
 export * from "./narrativeResponse";
 export * from "./pPPData";
 export * from "./propertyData";
+export * from "./visionRequest";
+export * from "./visionResponse";

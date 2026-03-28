@@ -22,6 +22,8 @@ import type {
   HealthStatus,
   NarrativeRequest,
   NarrativeResponse,
+  VisionRequest,
+  VisionResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -269,3 +271,89 @@ export function useGetDemoBlocks<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Analyze a building image with Gemini Vision
+ */
+export const getAnalyzeImageUrl = () => {
+  return `/api/narrative/vision`;
+};
+
+export const analyzeImage = async (
+  visionRequest: VisionRequest,
+  options?: RequestInit,
+): Promise<VisionResponse> => {
+  return customFetch<VisionResponse>(getAnalyzeImageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(visionRequest),
+  });
+};
+
+export const getAnalyzeImageMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeImage>>,
+    TError,
+    { data: BodyType<VisionRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof analyzeImage>>,
+  TError,
+  { data: BodyType<VisionRequest> },
+  TContext
+> => {
+  const mutationKey = ["analyzeImage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof analyzeImage>>,
+    { data: BodyType<VisionRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return analyzeImage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AnalyzeImageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof analyzeImage>>
+>;
+export type AnalyzeImageMutationBody = BodyType<VisionRequest>;
+export type AnalyzeImageMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Analyze a building image with Gemini Vision
+ */
+export const useAnalyzeImage = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeImage>>,
+    TError,
+    { data: BodyType<VisionRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof analyzeImage>>,
+  TError,
+  { data: BodyType<VisionRequest> },
+  TContext
+> => {
+  return useMutation(getAnalyzeImageMutationOptions(options));
+};

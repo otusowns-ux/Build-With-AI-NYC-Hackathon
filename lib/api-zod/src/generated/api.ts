@@ -100,3 +100,20 @@ export const GetDemoBlocksResponseItem = zod.object({
   zipCode: zod.string(),
 });
 export const GetDemoBlocksResponse = zod.array(GetDemoBlocksResponseItem);
+
+/**
+ * @summary Analyze a building image with Gemini Vision
+ */
+export const AnalyzeImageBody = zod.object({
+  imageBase64: zod.string().describe("Base64-encoded image data"),
+  mimeType: zod
+    .string()
+    .optional()
+    .describe("Image MIME type (e.g. image\/jpeg, image\/png)"),
+});
+
+export const AnalyzeImageResponse = zod.object({
+  visualDescription: zod
+    .string()
+    .describe("Gemini's visual analysis of the building\/block"),
+});

@@ -69,6 +69,36 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DemoBlock"
+  /narrative/vision:
+    post:
+      operationId: analyzeImage
+      tags: [narrative]
+      summary: Analyze a building image with Gemini Vision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisionRequest"
+      responses:
+        "200":
+          description: Visual description from Gemini
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisionResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -116,6 +146,25 @@ components:
         - narrative
         - address
         - coordinates
+    VisionRequest:
+      type: object
+      properties:
+        imageBase64:
+          type: string
+          description: Base64-encoded image data
+        mimeType:
+          type: string
+          description: Image MIME type (e.g. image/jpeg, image/png)
+      required:
+        - imageBase64
+    VisionResponse:
+      type: object
+      properties:
+        visualDescription:
+          type: string
+          description: Gemini's visual analysis of the building/block
+      required:
+        - visualDescription
     PropertyData:
       type: object
       properties:

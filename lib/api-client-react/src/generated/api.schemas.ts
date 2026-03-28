@@ -79,6 +79,18 @@ export interface NarrativeResponse {
   coordinates: Coordinates;
 }
 
+export interface VisionRequest {
+  /** Base64-encoded image data */
+  imageBase64: string;
+  /** Image MIME type (e.g. image/jpeg, image/png) */
+  mimeType?: string;
+}
+
+export interface VisionResponse {
+  /** Gemini's visual analysis of the building/block */
+  visualDescription: string;
+}
+
 export interface DemoBlock {
   name: string;
   description: string;
