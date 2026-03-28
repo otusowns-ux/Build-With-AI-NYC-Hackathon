@@ -1,0 +1,239 @@
+this is the read me for what I am trying to build :# Build-With-AI-NYC-Hackathon
+**CB — A civic narrative agent that synthesizes NYC property, mortgage, and pandemic relief data into an interleaved block-level story of any address in the city.**
+# CB
+### New York City's history is locked in silos. We break them.
+
+CB is a civic narrative agent that synthesizes spatial, financial, and historical data into a single interleaved story of any NYC block. Click a location. CB generates the full picture — archival photos from the exact era, mortgage denial data, pandemic relief gaps, property history — woven into one coherent narrative. We don't just show you what is there. We show you the economic and social forces that made it that way.
+
+Built at the Google NYC Hackathon, 2026.
+
+---
+
+## The Problem
+
+New York City's history is fully documented but completely inaccessible. The data exists to understand why any neighborhood looks the way it does today — who built it, who was pushed out, where the money went, and who got helped when it mattered most. But that data is buried across dozens of incompatible public archives: 100-year-old property records, federal mortgage disclosure filings, pandemic relief databases, and landmark preservation reports that have never been connected.
+
+Right now if you want to understand why a block in East Flatbush looks the way it does — why that corner is vacant, why that building is deteriorating, why that neighborhood never recovered — you need a policy researcher, three hours, and access to eight different government databases.
+
+CB does it in one click.
+
+---
+
+## What It Does
+
+- **Click any block in NYC** on an interactive map
+- **CB synthesizes across four live city datasets** — not a static document, not a chatbot, but a cross-dataset narrative agent that reasons across spatial, financial, and historical data simultaneously
+- **Gemini generates an interleaved narrative** — archival photos from the NYPL collection appear exactly when the narrative mentions that era, charts of mortgage denial rates appear when redlining is discussed, PPP coverage gaps appear when pandemic relief is referenced
+- **The output is a documentary, not a report** — text, real historical photos, and data visualizations flowing together in a single coherent stream
+
+---
+
+## The Narrative CB Tells
+
+When you click a block in East Flatbush, CB generates something like:
+
+*"This building was constructed in 1923. Land use records show it was classified as a mixed residential and commercial property through the mid-20th century.*
+
+*[Photo: This block in 1931, NYPL Milstein Collection]*
+
+*HMDA data shows mortgage applications in this zip code are denied at three times the city average. That pattern appears consistently across the available record, from 2007 through 2023.*
+
+*[Chart: Mortgage denial rates 2023 — this zip code vs. city average]*
+
+*During the 2020-2021 PPP program, this zip code received loans covering approximately half the share of eligible businesses compared to the city average.*
+
+*[Chart: PPP loan coverage by zip code, 2020-2021]*
+
+*No landmark designation is on record for this block. Current zoning is R6."*
+
+That is not a tourist app. That is the city's own data, connected for the first time.
+
+---
+
+## Why This Is Not Basic RAG
+
+Basic RAG retrieves from a single document and summarizes it. CB performs **Cross-Dataset Narrative Synthesis** — Gemini reasons across four structurally incompatible data schemas simultaneously:
+
+- **Spatial data** (PLUTO property records) — structured by BBL
+- **Financial data** (HMDA mortgage records) — structured by census tract
+- **Historical data** (LPC landmarks, NYPL archives) — structured by address and date
+- **Economic relief data** (SBA PPP loans) — structured by zip code
+
+These datasets do not share keys. Connecting them requires the model to reason across geographic boundaries, temporal gaps, and schema mismatches — and synthesize the result into a single human narrative. That is not retrieval. That is reasoning.
+
+---
+
+## Data Sources
+
+| Dataset | What It Contributes |
+|---|---|
+| **NYC PLUTO** (NYC DCP) | Year built, land use, zoning, ownership — the structural skeleton of every block |
+| **LPC Landmarks Database** | Architectural and historical landmark designations and significance |
+| **HMDA Mortgage Data** (CFPB) | Mortgage approval and denial rates by neighborhood and race, 2007–present |
+| **SBA PPP Loan Data** | Pandemic relief distribution by zip code — surfaces COVID-era equity gaps |
+| **NYPL Milstein Collection via OldNYC** | Real archival photographs mapped to NYC street locations |
+| **American Community Survey / Census** | Demographic shifts across decades by census tract |
+
+All data sources are public. No proprietary data. No paywalls. No hallucinated images.
+
+---
+
+## Tech Stack
+
+| Layer | Tool |
+|---|---|
+| **Map** | Mapbox GL JS |
+| **Backend** | Python + FastAPI |
+| **AI Narrative** | Gemini 1.5 Pro via Google GenAI SDK |
+| **Cross-Dataset Synthesis** | Multi-source pipeline across PLUTO, HMDA, PPP, LPC |
+| **Archival Photos** | OldNYC / NYPL Milstein Collection API |
+| **Hosting** | Google Cloud Run |
+| **Version Control** | GitHub |
+
+---
+
+## How It Works
+
+```
+User clicks location on map
+        ↓
+Coordinates → BBL (Borough Block Lot) lookup
+        ↓
+Parallel data retrieval:
+  → PLUTO API: year built, land use, zoning
+  → LPC API: landmark status and history
+  → HMDA data: mortgage denial rates by census tract
+  → PPP data: loan coverage by zip code
+  → OldNYC API: archival photos by location
+        ↓
+All structured data injected into Gemini prompt
+        ↓
+Gemini performs cross-dataset narrative synthesis
+Generates interleaved Markdown: text + photo placements + chart triggers
+        ↓
+Frontend renders interleaved stream:
+paragraphs → archival photos → data charts → paragraphs
+```
+
+---
+
+## Gemini System Instructions
+
+```
+You are CB — a civic narrative agent for New York City.
+
+Your job is to synthesize the following verified data into a
+single interleaved narrative about this specific block:
+
+PROPERTY DATA (PLUTO):
+Address: {address}
+Borough: {borough}
+Year Built: {year_built}
+Current Land Use: {land_use}
+Zoning: {zoning}
+
+LANDMARK STATUS (LPC):
+{landmark_status}
+
+FINANCIAL DATA (HMDA):
+Mortgage denial rate (this zip): {denial_rate}
+City average denial rate: {city_avg_denial}
+
+PANDEMIC RELIEF (PPP):
+PPP loan coverage (this zip): {ppp_coverage}
+City average PPP coverage: {city_avg_ppp}
+
+ARCHIVAL PHOTOS AVAILABLE:
+{photo_list_with_years}
+
+Generate a chronological narrative anchored only to the provided
+data. Move from the earliest dated reference available (year built
+or archival photo year) to the present. Describe changes in land
+use, landmark status, lending access, and pandemic relief only
+where supported by the data.
+
+If the data does not support a claim, do not infer it.
+If a data field is absent or zero, note the absence factually
+rather than speculate.
+Only describe present-day conditions directly supported by the
+provided data.
+Only compare to city averages when that comparison is provided.
+Anchor each era to a provided year — do not invent historical
+context beyond what the data supplies.
+
+Format your response as interleaved Markdown:
+- Write a paragraph of narrative
+- Insert [PHOTO: year] after the sentence that introduces that
+  era, so the visual lands at the right moment
+- Insert [CHART: mortgage_denial] when lending data is discussed
+- Insert [CHART: ppp_coverage] when pandemic relief is discussed
+- Continue narrative
+
+Be specific. Let the data speak.
+Do not editorialize. Do not moralize.
+State what happened and what the numbers show.
+200-300 words maximum.
+```
+
+---
+
+## Project Structure
+
+```
+/cb
+  /backend
+    main.py          ← FastAPI app, coordinates → data → Gemini
+    gemini.py        ← Cross-dataset narrative synthesis
+    pluto.py         ← PLUTO API lookup by BBL
+    lpc.py           ← LPC landmarks lookup
+    equity.py        ← HMDA + PPP data layer
+    photos.py        ← OldNYC / NYPL photo lookup
+  /frontend
+    index.html       ← Single page app
+    map.js           ← Mapbox map and click handler
+    narrative.js     ← Interleaved stream renderer
+    styles.css       ← Minimal styling
+  requirements.txt
+  README.md
+```
+
+---
+
+## Demo Blocks
+
+For a reliable demo, CB is pre-optimized for these five NYC locations:
+
+| Block | Why It Matters |
+|---|---|
+| **East Flatbush, Brooklyn** | Formally redlined 1940s, Caribbean community displacement, PPP gap |
+| **South Bronx, 10456** | Lowest PPP coverage in NYC, algorithmic city tools concentration |
+| **Harlem, 10037** | Century of demographic shift, landmark erasure, gentrification data |
+| **Dumbo, Brooklyn** | Industrial to luxury conversion, visible wealth gap story |
+| **Jackson Heights, Queens** | Immigrant business density, COVID impact, lending disparity |
+
+---
+
+## The Audience
+
+**Primary:** Community advocates and journalists who need evidence — not anecdotes — to fight displacement, challenge rezonings, and tell the stories of neighborhoods that have been systematically underserved.
+
+**Secondary:** Curious New Yorkers who want to understand the city they live in. The person on a bike who rides past a vacant lot and wonders why it's been empty for twenty years.
+
+**Tertiary:** Urban planners, architects, and policy researchers who work across the datasets CB connects — and have never seen them in one place before.
+
+---
+
+## The Bigger Vision
+
+CB is the first layer. As users interact with the map, every query contributes to a living index of NYC's civic memory. Over time that index — grounded entirely in public data, synthesized by AI, and made legible to anyone — becomes something the city has never had: a unified, navigable record of how every block came to be what it is today, and what the data shows about who was helped and who wasn't.
+
+Today: a civic narrative agent.
+Tomorrow: the city's memory.
+
+---
+
+## Built By
+
+Solo build. One developer. One night of brainstorming. One hackathon.
+New York University — Mechanical Engineering
+Google NYC Hackathon, 2026
