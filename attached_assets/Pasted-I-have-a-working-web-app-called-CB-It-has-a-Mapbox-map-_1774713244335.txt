@@ -1,0 +1,31 @@
+I have a working web app called CB. It has a Mapbox map, a FastAPI Python backend, and a narrative panel that generates text and charts when a user clicks the map. The app already uses the Gemini API and pulls data from NYC PLUTO and PPP datasets.
+
+I need you to add exactly two features without breaking anything that currently works:
+
+FEATURE 1: IMAGE UPLOAD + GEMINI VISION
+
+Add an image upload button to the top of the narrative panel. When a user uploads a photo or takes one with their camera:
+
+1. Send the image to Gemini Vision API (using the existing Gemini API key in environment variables) along with the current map coordinates if available
+2. Ask Gemini to identify what it sees — building type, estimated construction era, architectural features, and any visible signage or context clues about the location
+3. Display Gemini's visual description as the opening paragraph of the narrative panel, clearly labeled "What Gemini Sees:"
+4. Then automatically trigger the existing data lookup and narrative generation for that location as normal
+
+The image upload button should accept both file upload and camera capture (use accept="image/*" capture="environment" on the input element so it works on mobile).
+
+FEATURE 2: ADDRESS SEARCH BAR
+
+Add a search bar at the top of the map panel. When a user types an address and hits enter or clicks search:
+
+1. Use the Mapbox Geocoding API (https://api.mapbox.com/geocoding/v5/mapbox.places/{query}.json?access_token={MAPBOX_TOKEN}) to convert the address to coordinates
+2. Fly the map to those coordinates using map.flyTo()
+3. Drop a pin at that location
+4. Automatically trigger the existing click handler so the data lookup and narrative generation runs immediately for that address
+5. Display the resolved address name above the coordinates in the narrative panel
+
+CONSTRAINTS:
+- Keep all existing functionality exactly as is
+- Use the existing GEMINI_API_KEY and MAPBOX_TOKEN environment variables
+- The image upload and search bar should work independently — a user can use either one or both
+- If Gemini Vision cannot identify the location from the image, display "Location could not be identified from image. Please click a location on the map." and continue normally
+- Keep the UI clean — search bar sits above the map, image upload button sits at the top of the narrative panel
