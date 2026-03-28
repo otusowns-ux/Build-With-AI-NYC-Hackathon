@@ -1,4 +1,4 @@
-import { useState, useRef, type FormEvent, type KeyboardEvent } from "react";
+import { useState, useRef, type FormEvent } from "react";
 import { Search, Loader2 } from "lucide-react";
 
 interface AddressSearchProps {
@@ -80,12 +80,6 @@ export function AddressSearch({ onLocationFound, disabled }: AddressSearchProps)
     handleSearch();
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  };
-
   return (
     <div className="px-4 pt-3 pb-2 border-b border-border bg-card/30 shrink-0">
       <form onSubmit={handleSubmit} className="relative">
@@ -99,7 +93,6 @@ export function AddressSearch({ onLocationFound, disabled }: AddressSearchProps)
               setQuery(e.target.value);
               if (error) setError(null);
             }}
-            onKeyDown={handleKeyDown}
             placeholder="Search any NYC address…"
             disabled={isSearching || disabled}
             className="w-full pl-9 pr-10 py-2 text-sm bg-background border border-border rounded-lg
