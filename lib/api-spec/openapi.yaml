@@ -155,6 +155,12 @@ components:
         mimeType:
           type: string
           description: Image MIME type (e.g. image/jpeg, image/png)
+        lat:
+          type: number
+          description: Optional latitude hint for context
+        lng:
+          type: number
+          description: Optional longitude hint for context
       required:
         - imageBase64
     VisionResponse:

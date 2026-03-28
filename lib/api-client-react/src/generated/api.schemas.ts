@@ -84,6 +84,10 @@ export interface VisionRequest {
   imageBase64: string;
   /** Image MIME type (e.g. image/jpeg, image/png) */
   mimeType?: string;
+  /** Optional latitude hint for context */
+  lat?: number;
+  /** Optional longitude hint for context */
+  lng?: number;
 }
 
 export interface VisionResponse {

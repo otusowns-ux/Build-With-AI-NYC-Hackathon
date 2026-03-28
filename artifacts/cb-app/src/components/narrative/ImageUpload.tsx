@@ -6,22 +6,23 @@ interface ImageUploadProps {
   isAnalyzing: boolean;
   onStartAnalysis: () => void;
   onError: (msg: string) => void;
+  selectedLocation?: { lat: number; lng: number } | null;
 }
 
-async function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
+async function fileToBase64(file: File): Promise<{ base64: string; mimeType: string; dataUrl: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
       const base64 = result.split(",")[1];
-      resolve({ base64, mimeType: file.type || "image/jpeg" });
+      resolve({ base64, mimeType: file.type || "image/jpeg", dataUrl: result });
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-export function ImageUpload({ onVisionResult, isAnalyzing, onStartAnalysis, onError }: ImageUploadProps) {
+export function ImageUpload({ onVisionResult, isAnalyzing, onStartAnalysis, onError, selectedLocation }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -33,21 +34,26 @@ export function ImageUpload({ onVisionResult, isAnalyzing, onStartAnalysis, onEr
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      onError("Image must be under 10 MB.");
+    if (file.size > 15 * 1024 * 1024) {
+      onError("Image must be under 15 MB.");
       return;
     }
 
     onStartAnalysis();
 
     try {
-      const { base64, mimeType } = await fileToBase64(file);
-      const imageDataUrl = `data:${mimeType};base64,${base64}`;
+      const { base64, mimeType, dataUrl } = await fileToBase64(file);
+
+      const body: Record<string, unknown> = { imageBase64: base64, mimeType };
+      if (selectedLocation) {
+        body.lat = selectedLocation.lat;
+        body.lng = selectedLocation.lng;
+      }
 
       const res = await fetch("/api/narrative/vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64, mimeType }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -55,7 +61,7 @@ export function ImageUpload({ onVisionResult, isAnalyzing, onStartAnalysis, onEr
       }
 
       const data = await res.json() as { visualDescription: string };
-      onVisionResult(data.visualDescription, imageDataUrl);
+      onVisionResult(data.visualDescription, dataUrl);
     } catch {
       onError("Gemini couldn't analyze the image. Please try again.");
     } finally {

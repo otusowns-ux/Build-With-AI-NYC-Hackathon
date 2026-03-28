@@ -2,18 +2,26 @@ import { useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { BlockMap } from "@/components/map/BlockMap";
 import { AddressSearch } from "@/components/map/AddressSearch";
-import { NarrativeViewer } from "@/components/narrative/NarrativeViewer";
+import { NarrativeViewer, type VisionState } from "@/components/narrative/NarrativeViewer";
 import { useNarrative, useDemoBlocks } from "@/hooks/use-narrative";
 import { MapPin } from "lucide-react";
 
 export default function Home() {
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [addressLabel, setAddressLabel] = useState<string | null>(null);
+
+  // Vision state lives here so it can trigger narrative generation
+  const [vision, setVision] = useState<VisionState | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [visionError, setVisionError] = useState<string | null>(null);
 
   const { generateNarrative, isLoading, data: narrativeData } = useNarrative();
   const { blocks: demoBlocks, isLoading: blocksLoading } = useDemoBlocks();
 
-  const handleLocationSelect = async (lat: number, lng: number) => {
+  const handleLocationSelect = async (lat: number, lng: number, label?: string) => {
     setSelectedLocation({ lat, lng });
+    if (label) setAddressLabel(label);
+    else setAddressLabel(null);
     try {
       await generateNarrative({ lat, lng });
     } catch (error) {
@@ -21,8 +29,23 @@ export default function Home() {
     }
   };
 
-  const handleAddressFound = async (lat: number, lng: number, _label: string) => {
-    await handleLocationSelect(lat, lng);
+  const handleAddressFound = async (lat: number, lng: number, label: string) => {
+    await handleLocationSelect(lat, lng, label);
+  };
+
+  const handleVisionResult = async (description: string, imageDataUrl: string) => {
+    setVision({ description, imageDataUrl });
+    setIsAnalyzing(false);
+    setVisionError(null);
+
+    // Auto-trigger narrative if a location is already selected
+    if (selectedLocation) {
+      try {
+        await generateNarrative({ lat: selectedLocation.lat, lng: selectedLocation.lng });
+      } catch (error) {
+        console.error("Failed to regenerate narrative after vision:", error);
+      }
+    }
   };
 
   return (
@@ -89,6 +112,14 @@ export default function Home() {
             <NarrativeViewer
               isLoading={isLoading}
               data={narrativeData}
+              addressLabel={addressLabel}
+              vision={vision}
+              isAnalyzing={isAnalyzing}
+              visionError={visionError}
+              selectedLocation={selectedLocation}
+              onVisionResult={handleVisionResult}
+              onStartAnalysis={() => { setIsAnalyzing(true); setVisionError(null); }}
+              onVisionError={(msg) => { setVisionError(msg); setIsAnalyzing(false); }}
             />
           </div>
         </section>

@@ -117,7 +117,11 @@ Generate a chronological narrative anchored to this data. Move from the earliest
   return response.text ?? "No narrative could be generated for this location.";
 }
 
-export async function analyzeImageWithVision(imageBase64: string, mimeType: string): Promise<string> {
+export async function analyzeImageWithVision(
+  imageBase64: string,
+  mimeType: string,
+  locationHint?: { lat: number; lng: number },
+): Promise<string> {
   const ai = getGeminiClient();
 
   const systemPrompt = `You are CB — a civic narrative agent for New York City specializing in urban visual analysis.
@@ -125,7 +129,11 @@ export async function analyzeImageWithVision(imageBase64: string, mimeType: stri
 Analyze the provided photograph of a New York City building or streetscape with precision and journalistic restraint.
 Focus only on what is directly visible in the image. Do not speculate beyond what the photograph shows.`;
 
-  const userPrompt = `Analyze this photograph of a New York City building or block.
+  const locationContext = locationHint
+    ? `\nLocation context: approximately ${locationHint.lat.toFixed(4)}, ${locationHint.lng.toFixed(4)} in New York City.`
+    : "";
+
+  const userPrompt = `Analyze this photograph of a New York City building or block.${locationContext}
 
 Describe:
 1. Building type (residential, commercial, industrial, mixed-use, etc.)

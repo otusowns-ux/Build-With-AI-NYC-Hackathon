@@ -1,43 +1,48 @@
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Building2, Landmark, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { ImageUpload } from "./ImageUpload";
 import type { NarrativeResponse } from "@workspace/api-client-react/src/generated/api.schemas";
 
-interface NarrativeViewerProps {
-  isLoading: boolean;
-  data: NarrativeResponse | undefined;
-}
-
-interface VisionState {
+export interface VisionState {
   description: string;
   imageDataUrl: string;
 }
 
-export function NarrativeViewer({ isLoading, data }: NarrativeViewerProps) {
-  const [vision, setVision] = useState<VisionState | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [visionError, setVisionError] = useState<string | null>(null);
+interface NarrativeViewerProps {
+  isLoading: boolean;
+  data: NarrativeResponse | undefined;
+  addressLabel?: string | null;
+  vision: VisionState | null;
+  isAnalyzing: boolean;
+  visionError: string | null;
+  selectedLocation?: { lat: number; lng: number } | null;
+  onVisionResult: (description: string, imageDataUrl: string) => void;
+  onStartAnalysis: () => void;
+  onVisionError: (msg: string) => void;
+}
 
-  const handleVisionResult = (description: string, imageDataUrl: string) => {
-    setVision({ description, imageDataUrl });
-    setIsAnalyzing(false);
-    setVisionError(null);
-  };
-
-  const handleVisionError = (msg: string) => {
-    setVisionError(msg);
-    setIsAnalyzing(false);
-  };
+export function NarrativeViewer({
+  isLoading,
+  data,
+  addressLabel,
+  vision,
+  isAnalyzing,
+  visionError,
+  selectedLocation,
+  onVisionResult,
+  onStartAnalysis,
+  onVisionError,
+}: NarrativeViewerProps) {
 
   const uploadBar = (
     <div className="px-2 md:px-8 pt-5 pb-3 flex flex-col gap-2">
       <ImageUpload
-        onVisionResult={handleVisionResult}
+        onVisionResult={onVisionResult}
         isAnalyzing={isAnalyzing}
-        onStartAnalysis={() => { setIsAnalyzing(true); setVisionError(null); }}
-        onError={handleVisionError}
+        onStartAnalysis={onStartAnalysis}
+        onError={onVisionError}
+        selectedLocation={selectedLocation}
       />
       {visionError && (
         <div className="flex items-center gap-1.5 text-xs text-red-500/80 px-1">
@@ -145,6 +150,8 @@ export function NarrativeViewer({ isLoading, data }: NarrativeViewerProps) {
     );
   }
 
+  const displayAddress = addressLabel || data.address || "Unnamed Location";
+
   return (
     <div className="flex flex-col h-full">
       {uploadBar}
@@ -165,7 +172,7 @@ export function NarrativeViewer({ isLoading, data }: NarrativeViewerProps) {
             </div>
 
             <h2 className="text-3xl md:text-4xl font-serif font-semibold tracking-tight text-foreground mb-6 leading-tight">
-              {data.address || "Unnamed Location"}
+              {displayAddress}
             </h2>
 
             {/* Property Data Chips */}

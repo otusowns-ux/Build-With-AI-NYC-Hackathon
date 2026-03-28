@@ -110,6 +110,8 @@ export const AnalyzeImageBody = zod.object({
     .string()
     .optional()
     .describe("Image MIME type (e.g. image\/jpeg, image\/png)"),
+  lat: zod.number().optional().describe("Optional latitude hint for context"),
+  lng: zod.number().optional().describe("Optional longitude hint for context"),
 });
 
 export const AnalyzeImageResponse = zod.object({
