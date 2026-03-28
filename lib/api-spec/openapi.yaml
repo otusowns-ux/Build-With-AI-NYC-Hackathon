@@ -1,15 +1,16 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CB Civic Narrative API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: narrative
+    description: CB civic narrative generation
 paths:
   /healthz:
     get:
@@ -24,6 +25,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /narrative:
+    post:
+      operationId: generateNarrative
+      tags: [narrative]
+      summary: Generate civic narrative for a location
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NarrativeRequest"
+      responses:
+        "200":
+          description: Generated narrative with data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NarrativeResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /narrative/demo-blocks:
+    get:
+      operationId: getDemoBlocks
+      tags: [narrative]
+      summary: Get pre-optimized demo blocks
+      responses:
+        "200":
+          description: List of demo blocks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DemoBlock"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +78,159 @@ components:
           type: string
       required:
         - status
-
+    NarrativeRequest:
+      type: object
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+        address:
+          type: string
+      required:
+        - lat
+        - lng
+    NarrativeResponse:
+      type: object
+      properties:
+        narrative:
+          type: string
+          description: Interleaved markdown narrative from Gemini
+        propertyData:
+          $ref: "#/components/schemas/PropertyData"
+        landmarkData:
+          $ref: "#/components/schemas/LandmarkData"
+        mortgageData:
+          $ref: "#/components/schemas/MortgageData"
+        pppData:
+          $ref: "#/components/schemas/PPPData"
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchivalPhoto"
+        address:
+          type: string
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+      required:
+        - narrative
+        - address
+        - coordinates
+    PropertyData:
+      type: object
+      properties:
+        address:
+          type: string
+        borough:
+          type: string
+        yearBuilt:
+          type: integer
+        landUse:
+          type: string
+        zoning:
+          type: string
+        bbl:
+          type: string
+        lotArea:
+          type: number
+        bldgArea:
+          type: number
+        numFloors:
+          type: number
+        unitsTotal:
+          type: integer
+        ownerName:
+          type: string
+    LandmarkData:
+      type: object
+      properties:
+        isLandmark:
+          type: boolean
+        landmarkName:
+          type: string
+        designation:
+          type: string
+        designationDate:
+          type: string
+        borough:
+          type: string
+    MortgageData:
+      type: object
+      properties:
+        zipCode:
+          type: string
+        denialRate:
+          type: number
+        cityAvgDenialRate:
+          type: number
+        totalApplications:
+          type: integer
+        totalDenials:
+          type: integer
+        year:
+          type: integer
+    PPPData:
+      type: object
+      properties:
+        zipCode:
+          type: string
+        totalLoans:
+          type: integer
+        totalAmount:
+          type: number
+        avgLoanAmount:
+          type: number
+        coverageRate:
+          type: number
+        cityAvgCoverageRate:
+          type: number
+    ArchivalPhoto:
+      type: object
+      properties:
+        url:
+          type: string
+        year:
+          type: integer
+        description:
+          type: string
+        source:
+          type: string
+      required:
+        - url
+        - year
+    Coordinates:
+      type: object
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+      required:
+        - lat
+        - lng
+    DemoBlock:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        zipCode:
+          type: string
+      required:
+        - name
+        - description
+        - lat
+        - lng
+        - zipCode
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

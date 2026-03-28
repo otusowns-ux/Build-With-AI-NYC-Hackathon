@@ -1,0 +1,14 @@
+packages:
+  "leaflet": "Interactive mapping library"
+  "@types/leaflet": "TypeScript definitions for Leaflet"
+  "react-leaflet": "React components for Leaflet maps"
+  "recharts": "Data visualization for inline charts"
+  "framer-motion": "Animations for loading states and UI transitions"
+  "react-markdown": "Parsing and rendering the narrative markdown"
+  "remark-gfm": "Markdown plugin for GitHub flavored markdown support"
+  "clsx": "Utility for constructing className strings"
+  "tailwind-merge": "Utility to safely merge Tailwind classes"
+
+notes:
+  - The API client hooks are imported from @workspace/api-client-react
+  - Using a custom SVG marker for Leaflet to avoid default icon path issues in Vite

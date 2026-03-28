@@ -1,8 +1,10 @@
-# Workspace
+# Workspace — CB: NYC Civic Narrative Agent
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+CB is a civic narrative agent that synthesizes spatial, financial, and historical data into a single interleaved story of any NYC block. Click a location on the map, CB generates the full picture — property history, mortgage denial rates, pandemic relief gaps, and archival photos — woven into one coherent narrative by Gemini AI.
+
+Built at the Google NYC Hackathon, 2026.
 
 ## Stack
 
@@ -14,83 +16,78 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Build**: esbuild (ESM bundle)
+- **Frontend**: React + Vite + Tailwind CSS
+- **Map**: Leaflet + OpenStreetMap
+- **Charts**: Recharts
+- **AI Narrative**: Gemini 2.5 Flash via Replit AI Integrations
 
 ## Structure
 
 ```text
 artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
+├── artifacts/
+│   ├── api-server/         # Express API server
+│   └── cb-app/             # React + Vite frontend (CB app)
+├── lib/
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+│   ├── db/                 # Drizzle ORM schema + DB connection
+│   └── integrations-gemini-ai/  # Gemini AI integration client
+└── scripts/                # Utility scripts
 ```
 
-## TypeScript & Composite Projects
+## Key Architecture
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+### Data Sources
+- **NYC PLUTO** (NYC Open Data): Property data by coordinates/BBL — year built, land use, zoning
+- **LPC Landmarks** (NYC Open Data): Landmark designation data by location
+- **HMDA Mortgage Data**: Embedded static data by zip code (2023) with city averages
+- **SBA PPP Loan Data**: Embedded static data by zip code (2020-2021)
+- **OldNYC / NYPL Milstein Collection**: Archival photos by lat/lng
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+### Backend Route Flow
+```
+POST /api/narrative { lat, lng }
+  → geocodeLatLng() — Planning Labs API → Nominatim fallback
+  → fetchPropertyData() — PLUTO via NYC Open Data
+  → fetchLandmarkData() — LPC via NYC Open Data
+  → getMortgageData() — static HMDA data by zip
+  → getPPPData() — static PPP data by zip
+  → fetchArchivalPhotos() — OldNYC API
+  → generateCivicNarrative() — Gemini 2.5 Flash synthesis
+  → returns NarrativeResponse with interleaved markdown
+```
 
-## Root Scripts
+### Narrative Format
+Gemini produces interleaved markdown with special markers:
+- `[PHOTO: YEAR]` → renders matching archival photo from OldNYC
+- `[CHART: mortgage_denial]` → renders Recharts bar chart (this zip vs city avg)
+- `[CHART: ppp_coverage]` → renders Recharts bar chart (this zip vs city avg)
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+### Demo Blocks
+Pre-optimized for 5 NYC locations:
+- East Flatbush, Brooklyn (11203)
+- South Bronx (10456)
+- Harlem, Manhattan (10037)
+- Dumbo, Brooklyn (11201)
+- Jackson Heights, Queens (11372)
 
-## Packages
+## API Endpoints
+- `POST /api/narrative` — Generate narrative for lat/lng
+- `GET /api/narrative/demo-blocks` — Get 5 pre-optimized demo blocks
+- `GET /api/healthz` — Health check
 
-### `artifacts/api-server` (`@workspace/api-server`)
+## Environment Variables (Auto-provisioned)
+- `DATABASE_URL` — PostgreSQL connection
+- `AI_INTEGRATIONS_GEMINI_BASE_URL` — Gemini API base URL
+- `AI_INTEGRATIONS_GEMINI_API_KEY` — Gemini API key
+- `PORT` — Server port (auto-assigned)
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
+## Running
 
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+- API server: `pnpm --filter @workspace/api-server run dev`
+- Frontend: `pnpm --filter @workspace/cb-app run dev`
+- Run codegen: `pnpm --filter @workspace/api-spec run codegen`
+- Push DB: `pnpm --filter @workspace/db run push`
